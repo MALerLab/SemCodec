@@ -45,13 +45,10 @@ def get_solver(cfg: omegaconf.DictConfig) -> StandardSolver:
     from .compression import CompressionSolver
     from .musicgen import MusicGenSolver
     from .diffusion import DiffusionSolver
-    from .magnet import MagnetSolver, AudioMagnetSolver
     klass = {
         'compression': CompressionSolver,
         'musicgen': MusicGenSolver,
         'audiogen': AudioGenSolver,
-        'magnet': MagnetSolver,
-        'audio_magnet': AudioMagnetSolver,
         'lm': MusicGenSolver,  # backward compatibility
         'diffusion': DiffusionSolver,
         'sound_lm': AudioGenSolver,  # backward compatibility
@@ -111,7 +108,7 @@ def get_optimizer(params: tp.Union[nn.Module, tp.Iterable[torch.Tensor]], cfg: o
     elif cfg.optimizer == 'dadam':
         optimizer = optim.DAdaptAdam(parameters, lr=cfg.lr, **cfg.adam)
     else:
-        raise ValueError(f"Unsupported Optimizer: {cfg.optimizer}")
+        raise ValueError(f"Unsupported LR Scheduler: {cfg.lr_scheduler}")
     return optimizer
 
 
@@ -349,6 +346,7 @@ def get_audio_datasets(cfg: omegaconf.DictConfig,
             dataset = data.sound_dataset.SoundDataset.from_meta(path, **kwargs)
         elif dataset_type == DatasetType.AUDIO:
             dataset = data.info_audio_dataset.InfoAudioDataset.from_meta(path, return_info=return_info, **kwargs)
+        # TODO: Add AudioMIDI dataset
         else:
             raise ValueError(f"Dataset type is unsupported: {dataset_type}")
 

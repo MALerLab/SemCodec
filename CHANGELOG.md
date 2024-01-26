@@ -4,15 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.3.0a] - TBD
-
-Adding the MAGNeT model (https://arxiv.org/abs/2401.04577) along with hf checkpoints and a gradio demo app.
-
-Typo fixes.
-
-Fixing setup.py to install only audiocraft, not the unit tests and scripts.
-
-## [1.2.0] - 2024-01-11
+## [1.2.0a] - TBD
 
 Adding stereo models.
 

@@ -26,7 +26,7 @@ logger = logging.getLogger()
 
 
 class CompressionModel(ABC, nn.Module):
-    """Base API for all compression models that aim at being used as audio tokenizers
+    """Base API for all compression model that aim at being used as audio tokenizers
     with a language model.
     """
 
@@ -99,7 +99,7 @@ class CompressionModel(ABC, nn.Module):
             - dac_24khz (same)
             - facebook/encodec_24khz (https://huggingface.co/facebook/encodec_24khz)
             - facebook/encodec_32khz (https://huggingface.co/facebook/encodec_32khz)
-            - your own model on Hugging Face. Export instructions to come...
+            - your own model on HugginFace. Export instructions to come...
         """
 
         from . import builders, loaders
@@ -112,7 +112,7 @@ class CompressionModel(ABC, nn.Module):
             logger.info("Getting pretrained compression model for debug")
             model = builders.get_debug_compression_model()
         elif Path(name).exists():
-            # We assume here if the path exists that it is in fact an AC checkpoint
+            # We assume here if the paths exist that it is in fact an AC checkpoint
             # that was exported using `audiocraft.utils.export` functions.
             model = loaders.load_compression_model(name, device=device)
         else:
@@ -228,8 +228,8 @@ class EncodecModel(CompressionModel):
 
         Returns:
             codes, scale (tuple of torch.Tensor, torch.Tensor): Tuple composed of:
-                codes: a float tensor of shape [B, K, T] with K the number of codebooks used and T the timestep.
-                scale: a float tensor containing the scale for audio renormalization.
+                codes a float tensor of shape [B, K, T] with K the number of codebooks used and T the timestep.
+                scale a float tensor containing the scale for audio renormalizealization.
         """
         assert x.dim() == 3
         x, scale = self.preprocess(x)
@@ -258,6 +258,36 @@ class EncodecModel(CompressionModel):
         """Decode from the discrete codes to continuous latent space."""
         return self.quantizer.decode(codes)
 
+class SemCodecModel(EncodecModel):
+    def __init__(self,
+                 encoder: nn.Module,
+                 decoder: nn.Module,
+                 midi_decoder: nn.Module,
+                 quantizer: qt.BaseQuantizer,
+                 frame_rate: int,
+                 sample_rate: int,
+                 channels: int,
+                 causal: bool = False,
+                 renormalize: bool = False):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.midi_decoder = midi_decoder
+        self.quantizer = quantizer
+        self.frame_rate = frame_rate
+        self.sample_rate = sample_rate
+        self.channels = channels
+        self.renormalize = renormalize
+        self.causal = causal
+        if self.causal:
+            # we force disabling here to avoid handling linear overlap of segments
+            # as supported in original EnCodec codebase.
+            assert not self.renormalize, 'Causal model does not support renormalize'
+    
+    def midi_decode(self, codes: torch.Tensor):
+        emb = self.decode_latent(codes)
+        out = self.midi_decoder(emb)
+        return out
 
 class DAC(CompressionModel):
     def __init__(self, model_type: str = "44khz"):
