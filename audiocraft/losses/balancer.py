@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import typing as tp
+from typing import Dict
 
 import flashy
 import torch
@@ -133,4 +134,82 @@ class Balancer:
             effective_loss += scale * losses[name].detach()
         # Send the computed partial derivative with respect to the output of the model to the model.
         input.backward(out_grad)
+        return effective_loss
+
+class SemBalancer(Balancer):
+    def __init__(self, weights: Dict[str, float], balance_grads: bool = True, total_norm: float = 1, ema_decay: float = 0.999, per_batch_item: bool = True, epsilon: float = 1e-12, monitor: bool = False):
+        super().__init__(weights, balance_grads, total_norm, ema_decay, per_batch_item, epsilon, monitor)
+
+    def backward(self, losses: tp.Dict[str, torch.Tensor], audio_input: torch.Tensor, midi_input: torch.Tensor) -> torch.Tensor:
+        """Compute the backward and return the effective train loss, e.g. the loss obtained from
+        computing the effective weights. If `balance_grads` is True, the effective weights
+        are the one that needs to be applied to each gradient to respect the desired relative
+        scale of gradients coming from each loss.
+
+        Args:
+            losses (Dict[str, torch.Tensor]): dictionary with the same keys as `self.weights`.
+            audio_input (torch.Tensor): the input of the losses, typically the output of the model.
+                This should be the single point of dependence between the losses
+                and the model being trained.
+            midi_input (torch.Tensor): the input of the losses, typically the output of the model.
+                This should be the single point of dependence between the losses
+                and the model being trained.
+        """
+        norms = {}
+        grads = {}
+        for name, loss in losses.items():
+            if name == 'midi':
+                input = midi_input
+            else:
+                input = audio_input
+            # Compute partial derivative of the less with respect to the input.
+            grad, = autograd.grad(loss, [input], retain_graph=True)
+            if self.per_batch_item:
+                # We do not average the gradient over the batch dimension.
+                dims = tuple(range(1, grad.dim()))
+                norm = grad.norm(dim=dims, p=2).mean()
+            else:
+                norm = grad.norm(p=2)
+            norms[name] = norm
+            grads[name] = grad
+
+        count = 1
+        if self.per_batch_item:
+            count = len(grad)
+        # Average norms across workers. Theoretically we should average the
+        # squared norm, then take the sqrt, but it worked fine like that.
+        avg_norms = flashy.distrib.average_metrics(self.averager(norms), count)
+        # We approximate the total norm of the gradient as the sums of the norms.
+        # Obviously this can be very incorrect if all gradients are aligned, but it works fine.
+        total = sum(avg_norms.values())
+
+        self._metrics = {}
+        if self.monitor:
+            # Store the ratio of the total gradient represented by each loss.
+            for k, v in avg_norms.items():
+                self._metrics[f'ratio_{k}'] = v / total
+
+        total_weights = sum([self.weights[k] for k in avg_norms])
+        assert total_weights > 0.
+        desired_ratios = {k: w / total_weights for k, w in self.weights.items()}
+
+        audio_out_grad = torch.zeros_like(audio_input)
+        midi_out_grad = torch.zeros_like(midi_input)
+        effective_loss = torch.tensor(0., device=audio_input.device, dtype=audio_input.dtype)
+        for name, avg_norm in avg_norms.items():
+            if self.balance_grads:
+                # g_balanced = g / avg(||g||) * total_norm * desired_ratio
+                scale = desired_ratios[name] * self.total_norm / (self.epsilon + avg_norm)
+            else:
+                # We just do regular weighted sum of the gradients.
+                scale = self.weights[name]
+            if name == 'midi':
+                midi_out_grad.add_(grads[name], alpha=scale)
+            else:
+                audio_out_grad.add_(grads[name], alpha=scale)
+            effective_loss += scale * losses[name].detach()
+        # Send the computed partial derivative with respect to the output of the model to the model.
+        audio_input.backward(audio_out_grad, retain_graph=True)
+        midi_input.backward(midi_out_grad)
+
         return effective_loss

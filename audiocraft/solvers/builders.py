@@ -37,15 +37,18 @@ class DatasetType(Enum):
     AUDIO = "audio"
     MUSIC = "music"
     SOUND = "sound"
+    MIDI = "midi"
 
 
 def get_solver(cfg: omegaconf.DictConfig) -> StandardSolver:
     """Instantiate solver from config."""
+    from .semcodec import SemCompressionSolver
     from .audiogen import AudioGenSolver
     from .compression import CompressionSolver
     from .musicgen import MusicGenSolver
     from .diffusion import DiffusionSolver
     klass = {
+        'semcodec': SemCompressionSolver,
         'compression': CompressionSolver,
         'musicgen': MusicGenSolver,
         'audiogen': AudioGenSolver,
@@ -186,6 +189,7 @@ def get_loss(loss_name: str, cfg: omegaconf.DictConfig):
         'mrstft': losses.MRSTFTLoss,
         'msspec': losses.MultiScaleMelSpectrogramLoss,
         'sisnr': losses.SISNR,
+        'midi': torch.nn.BCELoss,
     }[loss_name]
     kwargs = dict(getattr(cfg, loss_name))
     return klass(**kwargs)
@@ -195,6 +199,12 @@ def get_balancer(loss_weights: tp.Dict[str, float], cfg: omegaconf.DictConfig) -
     """Instantiate loss balancer from configuration for the provided weights."""
     kwargs: tp.Dict[str, tp.Any] = dict_from_config(cfg)
     return losses.Balancer(loss_weights, **kwargs)
+
+
+def get_semcodec_balancer(loss_weights: tp.Dict[str, float], cfg: omegaconf.DictConfig) -> losses.Balancer:
+    """Instantiate loss balancer from configuration for the provided weights."""
+    kwargs: tp.Dict[str, tp.Any] = dict_from_config(cfg)
+    return losses.SemBalancer(loss_weights, **kwargs)
 
 
 def get_adversary(name: str, cfg: omegaconf.DictConfig) -> nn.Module:
@@ -346,7 +356,8 @@ def get_audio_datasets(cfg: omegaconf.DictConfig,
             dataset = data.sound_dataset.SoundDataset.from_meta(path, **kwargs)
         elif dataset_type == DatasetType.AUDIO:
             dataset = data.info_audio_dataset.InfoAudioDataset.from_meta(path, return_info=return_info, **kwargs)
-        # TODO: Add AudioMIDI dataset
+        elif dataset_type == DatasetType.MIDI:
+            dataset = data.midi_dataset.MIDIAudioDataset.from_meta(path, **kwargs)
         else:
             raise ValueError(f"Dataset type is unsupported: {dataset_type}")
 

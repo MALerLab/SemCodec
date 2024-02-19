@@ -1,0 +1,10 @@
+# @package __global__
+
+datasource:
+  max_sample_rate: 32000
+  max_channels: 1
+
+  train: egs/midiaudio_train
+  valid: egs/midiaudio_valid
+  evaluate: egs/midiaudio_test
+  generate: egs/midiaudio_test

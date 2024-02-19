@@ -34,6 +34,7 @@ try:
 except ImportError:
     dora = None  # type: ignore
 
+import numpy as np
 
 @dataclass(order=True)
 class BaseInfo:
@@ -410,7 +411,7 @@ class AudioDataset:
             n_frames = int(self.sample_rate * self.segment_duration)
             return torch.zeros(self.channels, n_frames), self.sample_rate
 
-    def __getitem__(self, index: int) -> tp.Union[torch.Tensor, tp.Tuple[torch.Tensor, SegmentInfo]]:
+    def __getitem__(self, index: int, quantize_seek_time = False) -> tp.Union[torch.Tensor, tp.Tuple[torch.Tensor, SegmentInfo]]:
         if self.segment_duration is None:
             file_meta = self.meta[index]
             out, sr = audio_read(file_meta.path)
@@ -436,7 +437,13 @@ class AudioDataset:
                 # We add some variance in the file position even if audio file is smaller than segment
                 # without ending up with empty segments
                 max_seek = max(0, file_meta.duration - self.segment_duration * self.min_segment_ratio)
+                if quantize_seek_time: # For MIDIAudioDataset
+                    max_seek = file_meta.duration - self.segment_duration
                 seek_time = torch.rand(1, generator=rng).item() * max_seek
+                if quantize_seek_time: # For MIDIAudioDataset
+                    # print("pre_seek_time : ", seek_time)
+                    seek_time =  int(np.floor(seek_time * 50))/50 # Quantized to fs=50 
+                    # print("post_seek_time : ", seek_time)
                 try:
                     out, sr = audio_read(file_meta.path, seek_time, self.segment_duration, pad=False)
                     out = convert_audio(out, sr, self.sample_rate, self.channels)

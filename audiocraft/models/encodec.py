@@ -258,7 +258,7 @@ class EncodecModel(CompressionModel):
         """Decode from the discrete codes to continuous latent space."""
         return self.quantizer.decode(codes)
 
-class SemCodecModel(EncodecModel):
+class SemcodecModel(EncodecModel):
     def __init__(self,
                  encoder: nn.Module,
                  decoder: nn.Module,
@@ -269,16 +269,16 @@ class SemCodecModel(EncodecModel):
                  channels: int,
                  causal: bool = False,
                  renormalize: bool = False):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        super().__init__(encoder, decoder, quantizer, frame_rate, sample_rate, channels, causal, renormalize)
+        # self.encoder = encoder
+        # self.decoder = decoder
         self.midi_decoder = midi_decoder
-        self.quantizer = quantizer
-        self.frame_rate = frame_rate
-        self.sample_rate = sample_rate
-        self.channels = channels
-        self.renormalize = renormalize
-        self.causal = causal
+        # self.quantizer = quantizer
+        # self.frame_rate = frame_rate
+        # self.sample_rate = sample_rate
+        # self.channels = channels
+        # self.renormalize = renormalize
+        # self.causal = causal
         if self.causal:
             # we force disabling here to avoid handling linear overlap of segments
             # as supported in original EnCodec codebase.
@@ -288,6 +288,24 @@ class SemCodecModel(EncodecModel):
         emb = self.decode_latent(codes)
         out = self.midi_decoder(emb)
         return out
+
+    def forward(self, x: torch.Tensor):
+        assert x.dim() == 3
+        length = x.shape[-1]
+        x, scale = self.preprocess(x)
+
+        emb = self.encoder(x)
+        q_res = self.quantizer(emb, self.frame_rate)
+        out = self.decoder(q_res.x)
+        midi_out = self.midi_decoder(q_res.x)
+
+        # remove extra padding added by the encoder and decoder
+        assert out.shape[-1] >= length, (out.shape[-1], length)
+        out = out[..., :length]
+
+        q_res.x = self.postprocess(out, scale)
+
+        return q_res, midi_out
 
 class DAC(CompressionModel):
     def __init__(self, model_type: str = "44khz"):

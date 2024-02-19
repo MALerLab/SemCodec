@@ -1,0 +1,25 @@
+# @package __global__
+
+defaults:
+  - encodec/default
+
+compression_model: semcodec
+
+seanet:
+  ratios: [8, 5, 4, 4]
+  n_filters: 64
+
+rvq:
+  bins: 2048
+  n_q: 4
+  q_dropout: false
+
+mididecoder:
+  in_channels: 128
+  hidden_size: 256
+  out_channels: 88
+  kernel_size: 3
+  stride: 1
+  padding: 1
+
+  

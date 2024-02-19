@@ -15,7 +15,7 @@ import audiocraft
 import omegaconf
 import torch
 
-from .encodec import CompressionModel, EncodecModel, InterleaveStereoCompressionModel
+from .encodec import CompressionModel, EncodecModel, InterleaveStereoCompressionModel, SemcodecModel
 from .lm import LMModel
 from ..modules.codebooks_patterns import (
     CodebooksPatternProvider,
@@ -65,6 +65,12 @@ def get_encodec_autoencoder(encoder_name: str, cfg: omegaconf.DictConfig):
         raise KeyError(f"Unexpected compression model {cfg.compression_model}")
 
 
+def get_semcodec_mididecoder(cfg: omegaconf.DictConfig):
+    kwargs = dict_from_config(getattr(cfg, 'mididecoder'))
+    midi_decoder = audiocraft.modules.semcodec.SemCodecMidiDecoder(**kwargs)
+    return midi_decoder
+    
+
 def get_compression_model(cfg: omegaconf.DictConfig) -> CompressionModel:
     """Instantiate a compression model."""
     if cfg.compression_model == 'encodec':
@@ -78,6 +84,19 @@ def get_compression_model(cfg: omegaconf.DictConfig) -> CompressionModel:
         # deprecated params
         kwargs.pop('renorm', None)
         return EncodecModel(encoder, decoder, quantizer,
+                            frame_rate=frame_rate, renormalize=renormalize, **kwargs).to(cfg.device)
+    if cfg.compression_model == 'semcodec':
+        kwargs = dict_from_config(getattr(cfg, 'encodec'))
+        encoder_name = kwargs.pop('autoencoder')
+        quantizer_name = kwargs.pop('quantizer')
+        encoder, decoder = get_encodec_autoencoder(encoder_name, cfg)
+        midi_decoder = get_semcodec_mididecoder(cfg)
+        quantizer = get_quantizer(quantizer_name, cfg, encoder.dimension)
+        frame_rate = kwargs['sample_rate'] // encoder.hop_length
+        renormalize = kwargs.pop('renormalize', False)
+        # deprecated params
+        kwargs.pop('renorm', None)
+        return SemcodecModel(encoder, decoder, midi_decoder, quantizer,
                             frame_rate=frame_rate, renormalize=renormalize, **kwargs).to(cfg.device)
     else:
         raise KeyError(f"Unexpected compression model {cfg.compression_model}")

@@ -1,0 +1,93 @@
+# @package __global__
+
+defaults:
+  - compression/default
+  - /model: encodec/semcodec_large_nq4_s640
+  - override /dset: audio/maestro
+  - _self_
+
+solver: semcodec
+channels: 1
+sample_rate: 32000
+
+# loss balancing
+losses:
+  adv: 4.
+  feat: 4.
+  l1: 0.1
+  mel: 0.
+  msspec: 2.
+  sisnr: 0.
+  midi: 4.
+
+midi: {}
+
+# data hyperparameters
+dataset:
+  batch_size: 2
+  num_workers: 0
+  segment_duration: 30
+  train:
+    batch_size: 2
+    num_samples: 10000
+  valid:
+    batch_size: 1
+    num_samples: 1000
+  evaluate:
+    batch_size: 1
+    num_samples: 1000
+  generate:
+    batch_size: 1
+    num_samples: 0
+    segment_duration: 10
+
+# solver hyperparameters
+evaluate:
+  every: 25
+  num_workers: 5
+  metrics:
+    visqol: false
+    sisnr: true
+generate:
+  every: null
+  num_workers: 5
+  audio:
+    sample_rate: ${sample_rate}
+
+# checkpointing schedule
+checkpoint:
+  save_last: true
+  save_every: 10
+  keep_last: 10
+  keep_every_states: null
+
+# optimization hyperparameters
+optim:
+  epochs: 10000
+  updates_per_epoch: 1000
+  lr: 1e-4
+  max_norm: 0.
+  optimizer: adam
+  adam:
+    betas: [0.5, 0.9]
+    weight_decay: 0.
+  ema:
+    use: true         # whether to use EMA or not
+    updates: 1        # update at every step
+    device: ${device} # device for EMA, can be put on GPU if more frequent updates
+    decay: 0.99       # EMA decay value, if null, no EMA is used
+
+logging:
+  level: INFO
+  log_updates: 500
+  log_tensorboard: false
+  log_wandb: true
+tensorboard:
+  with_media_logging: false
+  name:  # optional name for the experiment
+  sub_dir:  # optional sub directory to store tensorboard data
+wandb:
+  with_media_logging: true
+  project: SemCodec_Finetune_Test
+  name: Test001
+  group:  # optional group

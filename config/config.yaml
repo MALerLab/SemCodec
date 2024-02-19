@@ -32,15 +32,15 @@ logging:
   level: INFO
   log_updates: 10
   log_tensorboard: false
-  log_wandb: false
+  log_wandb: true
 tensorboard:
   with_media_logging: false
   name:  # optional name for the experiment
   sub_dir:  # optional sub directory to store tensorboard data
 wandb:
   with_media_logging: true
-  project:  # project name
-  name:  # optional name for the experiment
+  project: SemCodec_Finetune
+  name: Test
   group:  # optional group
 
 # SLURM launcher configuration.
