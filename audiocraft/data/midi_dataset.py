@@ -93,8 +93,7 @@ class MIDIAudioDataset(AudioDataset):
         audio_segment, segment_info = super().__getitem__(index, quantize_seek_time= True)
         
         # Calculate the corresponding MIDI segment time
-        start_time = segment_info.seek_time
-        end_time = start_time + self.segment_duration  # 30 seconds segment
+        start_frame = round(segment_info.seek_time * 50)
         # print(start_time*50, end_time*50)
         # Construct Piano Roll file path (this may vary based on your file structure)
         pr_file_path = f"{segment_info.meta.path.replace('_32khz_mono.wav', '_full_pianoroll.pkl')}"
@@ -102,8 +101,8 @@ class MIDIAudioDataset(AudioDataset):
         # Load the Piano Roll file and extract the segment
         # print(start_time, end_time)
         full_pr = torch.load(pr_file_path)
-        piano_roll_segment = full_pr[..., int(np.round(start_time))*50:int(np.round(end_time))*50]
-        if piano_roll_segment.shape[-1] < 1500:
+        piano_roll_segment = full_pr[..., start_frame : start_frame + self.segment_duration*50]
+        if piano_roll_segment.shape[-1] != self.segment_duration*50:
             print("Piano Roll Segment too short! Popping")
             print(piano_roll_segment.shape)
             return self.__getitem__(index+1)
