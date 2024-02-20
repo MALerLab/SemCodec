@@ -64,7 +64,7 @@ checkpoint:
 # optimization hyperparameters
 optim:
   epochs: 10000
-  updates_per_epoch: 1000
+  updates_per_epoch: null
   lr: 1e-4
   max_norm: 0.
   optimizer: adam
@@ -89,5 +89,5 @@ tensorboard:
 wandb:
   with_media_logging: true
   project: SemCodec_Finetune_Train
-  name: Test001
+  name: Train_with_f1
   group:  # optional group

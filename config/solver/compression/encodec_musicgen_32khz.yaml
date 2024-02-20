@@ -3,8 +3,78 @@
 defaults:
   - compression/default
   - /model: encodec/encodec_large_nq4_s640
-  - override /dset: audio/default
+  - override /dset: audio/maestro
   - _self_
 
 channels: 1
 sample_rate: 32000
+
+# # data hyperparameters
+# dataset:
+#   batch_size: 12
+#   num_workers: 4
+#   segment_duration: 5
+#   train:
+#     batch_size: 12
+#     num_samples: 10000
+#   valid:
+#     batch_size: 12
+#     num_samples: 1000
+#   evaluate:
+#     batch_size: 1
+#     num_samples: 1000
+#   generate:
+#     batch_size: 1
+#     num_samples: 0
+#     segment_duration: 5
+
+# # solver hyperparameters
+# evaluate:
+#   every: 25
+#   num_workers: 5
+#   metrics:
+#     visqol: false
+#     sisnr: true
+# generate:
+#   every: null
+#   num_workers: 5
+#   audio:
+#     sample_rate: ${sample_rate}
+
+# # checkpointing schedule
+# checkpoint:
+#   save_last: true
+#   save_every: 10
+#   keep_last: 10
+#   keep_every_states: null
+
+# # optimization hyperparameters
+# optim:
+#   epochs: 10000
+#   updates_per_epoch: 50
+#   lr: 1e-4
+#   max_norm: 0.
+#   optimizer: adam
+#   adam:
+#     betas: [0.5, 0.9]
+#     weight_decay: 0.
+#   ema:
+#     use: true         # whether to use EMA or not
+#     updates: 1        # update at every step
+#     device: ${device} # device for EMA, can be put on GPU if more frequent updates
+#     decay: 0.99       # EMA decay value, if null, no EMA is used
+
+logging:
+  level: INFO
+  log_updates: 5000
+  log_tensorboard: false
+  log_wandb: true
+tensorboard:
+  with_media_logging: false
+  name:  # optional name for the experiment
+  sub_dir:  # optional sub directory to store tensorboard data
+wandb:
+  with_media_logging: true
+  project: EnCodec_MAESTRO_Finetune_Test_2
+  name: Test001
+  group:  # optional group
