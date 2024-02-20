@@ -106,6 +106,21 @@ class SemCompressionSolver(base.StandardSolver):
         qres, midi_y_pred = self.model(x)
         assert isinstance(qres, quantization.QuantizedResult)
         y_pred = qres.x
+
+        midi_prediction = midi_y_pred.round()
+        if midi_prediction.sum().item() == 0 or midi_y.sum().item() == 0:
+            pass
+        else: 
+            frame_precision = (midi_prediction * midi_y).sum().item() / midi_prediction.sum().item()
+            frame_recall = (midi_prediction * midi_y).sum().item() / midi_y.sum().item()
+            if frame_precision + frame_recall == 0:
+                frame_f1 = 0
+            else:
+                frame_f1 = 2 * frame_precision * frame_recall / (frame_precision + frame_recall)
+            metrics['frame_f1'] = frame_f1
+            metrics['frame_precision'] = frame_precision
+            metrics['frame_recall'] = frame_recall
+
         # Log bandwidth in kb/s
         metrics['bandwidth'] = qres.bandwidth.mean()
 
