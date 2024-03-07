@@ -6,5 +6,5 @@ datasource:
 
   train: egs/midiaudio_train
   valid: egs/midiaudio_valid
-  evaluate: egs/midiaudio_test
-  generate: egs/midiaudio_test
+  evaluate: egs/midiaudio_test_small
+  generate: egs/midiaudio_test_small

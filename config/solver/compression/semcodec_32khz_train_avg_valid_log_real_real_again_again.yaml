@@ -2,12 +2,25 @@
 
 defaults:
   - compression/default
-  - /model: encodec/encodec_large_nq4_s640
+  - /model: encodec/semcodec_large_nq4_s640
   - override /dset: audio/maestro
   - _self_
 
+solver: semcodec
 channels: 1
 sample_rate: 32000
+
+# loss balancing
+losses:
+  adv: 4.
+  feat: 4.
+  l1: 0.1
+  mel: 0.
+  msspec: 2.
+  sisnr: 0.
+  midi: 4.
+
+midi: {}
 
 # data hyperparameters
 dataset:
@@ -30,21 +43,21 @@ dataset:
 
 # solver hyperparameters
 evaluate:
-  every: 25
-  num_workers: 5
+  every: null
+  num_workers: 0
   metrics:
     visqol: false
     sisnr: true
 generate:
   every: null
-  num_workers: 5
+  num_workers: 0
   audio:
     sample_rate: ${sample_rate}
 
 # checkpointing schedule
 checkpoint:
   save_last: true
-  save_every: 10
+  save_every: 20
   keep_last: 10
   keep_every_states: null
 
@@ -66,7 +79,7 @@ optim:
 
 logging:
   level: INFO
-  log_updates: 5000
+  log_updates: 83
   log_tensorboard: false
   log_wandb: true
 tensorboard:
@@ -75,6 +88,6 @@ tensorboard:
   sub_dir:  # optional sub directory to store tensorboard data
 wandb:
   with_media_logging: true
-  project: EnCodec_MAESTRO_Finetune
-  name: Train
+  project: SemCodec_Finetune_Train
+  name: Train_with_f1_avg_valid_log_real
   group:  # optional group

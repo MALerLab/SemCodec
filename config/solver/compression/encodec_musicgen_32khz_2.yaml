@@ -30,21 +30,21 @@ dataset:
 
 # solver hyperparameters
 evaluate:
-  every: 25
-  num_workers: 5
+  every: null
+  num_workers: 4
   metrics:
     visqol: false
     sisnr: true
 generate:
   every: null
-  num_workers: 5
+  num_workers: 4
   audio:
     sample_rate: ${sample_rate}
 
 # checkpointing schedule
 checkpoint:
   save_last: true
-  save_every: 10
+  save_every: 20
   keep_last: 10
   keep_every_states: null
 
@@ -66,7 +66,7 @@ optim:
 
 logging:
   level: INFO
-  log_updates: 5000
+  log_updates: 83
   log_tensorboard: false
   log_wandb: true
 tensorboard:
