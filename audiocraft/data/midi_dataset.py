@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 
-from .audio_dataset import AudioDataset, AudioMeta
+from .audio_dataset import OnMemoryAudioDataset, AudioDataset, AudioMeta
 import pretty_midi
 import mido
 import numpy as np
