@@ -27,6 +27,7 @@ torchmetrics = "*"
 encodec = "*"
 protobuf = "*"
 pretty-midi = "*"
+wandb = "*"
 
 [dev-packages]
 
