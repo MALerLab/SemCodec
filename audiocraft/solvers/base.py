@@ -93,7 +93,7 @@ class StandardSolver(ABC, flashy.BaseSolver):
         mem_usage = model_size * 4 * 4 / 1000
         self.logger.info("Model size: %.2f M params", model_size)
         self.logger.info("Base memory usage, with model, grad and optim: %.2f GB", mem_usage)
-        self.step = 0
+        self.step = 297821
 
     @property
     def autocast(self):
@@ -550,13 +550,19 @@ class StandardSolver(ABC, flashy.BaseSolver):
                 self.profiler.step()
                 instant_metrics = instant_average(metrics)
                 if lp.update(**instant_metrics):
-                    self.result_logger.log_metrics(self.current_stage, instant_metrics, step=self.step, step_name='update')
                     instant_average = flashy.averager()  # reset averager between two logging
+                if dataset_split == 'train':
+                    if self.step % 50 == 0:
+                        self.result_logger.log_metrics(self.current_stage, instant_metrics, step=self.step, step_name='update')
+                    self.step += 1
                 metrics = average(metrics)  # epoch wise average
-                self.step += 1
                 self.deadlock_detect.update('end_batch')
 
         metrics = flashy.distrib.average_metrics(metrics, updates_per_epoch)
+        if dataset_split == 'valid':
+            self.result_logger.log_metrics(self.current_stage, metrics, step=None, step_name='summary')                
+            self.step += 1
+    
         return metrics
 
     def train(self):
